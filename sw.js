@@ -1,11 +1,11 @@
 /* Reseteo Real: guarda la app en el dispositivo para que funcione sin conexión.
    Si actualizás index.html, cambiá el número de VERSION para que todos reciban la versión nueva. */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = 'reseteo-real-' + VERSION;
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './config.js'];
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => { })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('reseteo-real-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
