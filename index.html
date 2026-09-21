@@ -247,6 +247,10 @@ a.btn{color:#fff}a.btn.ghost{color:var(--sage-dd)}
 .bk .prose p,.bk .prose li,.bk li{font-size:var(--bk,16px)}
 .bkr{border-top:1px solid var(--line);padding:18px 0}.bkr h3{font-size:19px;margin-bottom:4px}
 mark{background:#F6E3A8;border-radius:3px;padding:0 1px;color:inherit}
+
+.ckstep{font-family:var(--serif);font-size:24px;line-height:1.5;margin:8px 0 12px}
+.cktimer{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--terra-l);border:1px solid #e6c2ad;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:600}
+.cktimer b{font-family:var(--serif);font-size:24px;color:var(--terra-d)}
 </style></head>
 <body><div id="app"><div id="main"></div></div><div id="ov"></div><div id="tt" aria-live="polite"></div>
 <noscript>Esta app necesita JavaScript activado.</noscript>
@@ -255,7 +259,8 @@ mark{background:#F6E3A8;border-radius:3px;padding:0 1px;color:inherit}
 /* Reseteo Real — app sin conexión. Los datos (recetas, planes, capítulos) están incluidos en este archivo. */
 const D = window.__DATA__, IMG = window.__IMGS__;
 const REC = Object.fromEntries(D.recipes.map(r => [r.id, r]));
-const CFG = Object.assign({ whatsapp: '', reviewUrl: '', shareUrl: 'https://silvi-aura.github.io/reseteo.real/', supportText: 'Hola, necesito ayuda con la app Reseteo Real.' }, window.RR_CONFIG || {});
+const APP_V = 'v7';
+const CFG = Object.assign({ supportEmail: 'silvi_y@hotmail.com', whatsapp: '', reviewUrl: '', shareUrl: 'https://silvi-aura.github.io/reseteo.real/', supportText: 'Hola, necesito ayuda con la app Reseteo Real.' }, window.RR_CONFIG || {});
 const CATS = { des: ['Desayunos', '🍳'], alm: ['Almuerzos', '🥗'], cen: ['Cenas', '🍲'], snk: ['Snacks', '🍎'], ens: ['Ensaladas', '🥬'], bat: ['Batidos', '🥤'], pos: ['Postres', '🍮'], fri: ['Freidora de aire', '🍟'], pro: ['Altas en proteínas', '💪'], low: ['Bajas en carbo', '🥩'] };
 const SLOTS = [['d', 'Desayuno'], ['a', 'Almuerzo'], ['c', 'Cena'], ['s', 'Snack']];
 const POOL = { d: ['des', 'bat'], a: ['alm', 'ens', 'pro', 'low'], c: ['cen', 'ens', 'low', 'pro'], s: ['snk', 'bat', 'pos'] };
@@ -445,11 +450,17 @@ function checkMilestones() {
 function kgLost() { const ws = S.weights.slice().sort((a, b) => a.d.localeCompare(b.d)); return ws.length > 1 ? ws[0].kg - ws[ws.length - 1].kg : 0; }
 const waLink = () => `https://wa.me/${String(CFG.whatsapp).replace(/\D/g, '')}?text=${encodeURIComponent(CFG.supportText)}`;
 
+const mailLink = () => `mailto:${CFG.supportEmail}?subject=${encodeURIComponent('Ayuda con Reseteo Real')}&body=${encodeURIComponent('Hola Silvi, necesito ayuda con la app.\n\nContame qué te pasa:\n\n\n(Versión de la app: ' + APP_V + ')')}`;
+
 /* ---------- estado de interfaz ---------- */
 const UI = { tab: 'inicio', stack: [], form: null, obStep: 0, q: '', cat: 'all', f: {}, lim: 40, shopTab: 'sem', shopWeek: null, planWeek: null, progWeek: null, lastKey: '', ack: false };
 const num = v => { const x = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(x) ? x : NaN; };
 function toast(m) { const t = $('#tt'); t.innerHTML = `<div class="toast" role="status">${esc(m)}</div>`; clearTimeout(toast.h); toast.h = setTimeout(() => t.innerHTML = '', 2600); }
-const photo = (id, cls = '') => IMG[id] ? `<img class="${cls}" src="${IMG[id]}" alt="" loading="lazy">` : `<img class="${cls}" src="fotos/${id}.jpg" alt="" loading="lazy" onerror="this.remove()">`;
+const PHEXT = ['jpg', 'png', 'webp', 'jpeg'];
+let PHX = {}; try { PHX = JSON.parse(localStorage.getItem('reseteoReal.phx') || '{}'); } catch (e) { }
+const photo = (id, cls = '') => { if (IMG[id]) return `<img class="${cls}" src="${IMG[id]}" alt="" loading="lazy">`; const e = PHX[id] || 'jpg'; return `<img class="${cls}" src="fotos/${id}.${e}" data-id="${id}" data-x="${Math.max(0, PHEXT.indexOf(e))}" alt="" loading="lazy" onerror="phErr(this)" onload="phOk(this)">`; };
+function phErr(im) { const t = (+im.dataset.t || 0) + 1; im.dataset.t = t; if (t >= PHEXT.length) { im.remove(); return; } const x = (+im.dataset.x + 1) % PHEXT.length; im.dataset.x = x; im.src = `fotos/${im.dataset.id}.${PHEXT[x]}`; }
+function phOk(im) { const id = im.dataset.id, e = (im.getAttribute('src') || '').split('.').pop().split('?')[0]; if (id && PHX[id] !== e) { PHX[id] = e; try { localStorage.setItem('reseteoReal.phx', JSON.stringify(PHX)); } catch (x) { } } }
 const thumb = id => `<div class="thumb"><span>${CATS[REC[id].c][1]}</span>${photo(id)}</div>`;
 const portTxt = q => { const r = Math.round(q * 100) / 100; return r === 1 ? '1 porción' : `${n2(r)} porciones`; };
 const macroBar = (v, t, cls = '') => `<div class="bar ${cls}" role="progressbar" aria-valuenow="${Math.round(v)}" aria-valuemax="${Math.round(t)}"><i style="width:${clamp(v / t * 100, 0, 100)}%"></i></div>`;
@@ -576,6 +587,7 @@ function vHoy() {
    <div class="card"><div class="stat"><b>${n0(t.prot)} g</b><span>de ${n0(c.pLo)} g prot.</span></div>${macroBar(t.prot, c.pLo, 'terra')}</div>
    <div class="card"><div class="stat"><b>${lg.water || 0}</b><span>de ${gl} vasos</span></div>${macroBar(lg.water || 0, gl)}</div></div>
   <div class="sec"><h2>Tus comidas de hoy</h2>${dayCard(n)}</div>
+  ${completeCard(n)}${retomarCard()}
   <div class="sec"><h3>Agua</h3><div class="card"><div class="glasses">${Array.from({ length: gl }, (_, i) => `<button class="glass" data-act="water" data-day="${n}" data-i="${i}" aria-pressed="${(lg.water || 0) > i}" aria-label="Vaso ${i + 1}"></button>`).join('')}</div><div class="tiny muted mt8">Meta: entre 30 y 35 ml por kg de peso, con un mínimo de 2 litros (8 vasos), como indican la guía y las GAPA.</div></div></div>
   <div class="sec"><h3>Frutas y verduras</h3><div class="card row between"><div><div class="b">${lg.fv || 0} porciones</div><div class="tiny muted">Meta de las GAPA: 5 al día, de distintos tipos y colores.</div></div>${stepper('fv', n, `${lg.fv || 0}`)}</div></div>
   <div class="sec"><h3>Cómo estás hoy</h3><div class="card">
@@ -735,7 +747,8 @@ function shRecipe(s) {
   <h2>${esc(r.n)}</h2><div class="mt8"><span class="mini">⏱ ${esc(r.tt)}</span><span class="mini">${r.p} ${r.p === 1 ? 'porción' : 'porciones'}</span><span class="mini">${esc(r.d)}</span>${r.v ? '<span class="mini t">Vegetariana</span>' : ''}</div>
   <div class="macros"><div><b>${r.k}</b><span>kcal</span></div><div><b>${r.pr} g</b><span>proteínas</span></div><div><b>${r.ch} g</b><span>carbohidr.</span></div><div><b>${r.fa} g</b><span>grasas</span></div></div>
   <div class="tiny muted" style="margin-top:-6px">Valores por porción.</div>${plan}
-  <div class="row mt12 wrapflex"><button class="btn ghost sm" data-act="fav" data-id="${r.id}" aria-pressed="${!!S.fav[r.id]}">${S.fav[r.id] ? '♥ En favoritas' : '♡ Guardar en favoritas'}</button><button class="btn ghost sm" data-act="addEx" data-id="${r.id}" data-day="${curDay() >= 1 ? curDay() : 1}">+ Sumar a hoy</button><button class="btn ghost sm" data-act="open" data-sh="place" data-id="${r.id}">Usar en mi plan</button></div>
+  <button class="btn block mt12" data-act="ckGo" data-id="${r.id}">👩‍🍳 Modo cocina: paso a paso</button>
+  <div class="row mt12 wrapflex"><button class="btn ghost sm" data-act="fav" data-id="${r.id}" aria-pressed="${!!S.fav[r.id]}">${S.fav[r.id] ? '♥ En favoritas' : '♡ Guardar en favoritas'}</button><button class="btn ghost sm" data-act="addEx" data-id="${r.id}" data-day="${curDay() >= 1 ? curDay() : 1}">+ Sumar a hoy</button><button class="btn ghost sm" data-act="open" data-sh="place" data-id="${r.id}">Usar en mi plan</button><button class="btn ghost sm" data-act="rcOpen" data-id="${r.id}">Compartir como imagen</button></div>
   <h3 class="mt24 mb8">Ingredientes</h3><ul class="ing">${r.ing.map(i => `<li>${esc(cap(i[0]))}</li>`).join('')}</ul><div class="tiny muted mt8">La receta rinde ${r.p} ${r.p === 1 ? 'porción' : 'porciones'}.</div>
   <h3 class="mt24 mb8">Preparación</h3><ol class="steps">${r.st.map((x, i) => `<li><i>${i + 1}</i><span>${esc(x)}</span></li>`).join('')}</ol>
   <h3 class="mt24 mb8">Beneficios</h3><p>${esc(r.be)}</p><h3 class="mt16 mb8">Tips y sustituciones</h3><p>${esc(r.ti)}</p>`;
@@ -773,7 +786,7 @@ function shMeasure() {
 function shSettings() {
   return `${head('Ajustes')}<div id="fmsg"></div>${profileFields()}<button class="btn block" data-act="saveSettings">Guardar cambios</button>
   ${INST.standalone ? '<div class="note sage mt16">La app ya está instalada en este dispositivo.</div>' : installEligible() ? '<h3 class="mt24 mb8">Instalar como app</h3><p class="small muted">Se abre desde un ícono y funciona sin conexión.</p><button class="btn ghost sm" data-act="install">Instalar la app</button>' : ''}
-  <h3 class="mt24 mb8">Ayuda</h3><div class="row wrapflex">${CFG.whatsapp ? `<a class="btn ghost sm" href="${waLink()}" target="_blank" rel="noopener noreferrer">Ayuda por WhatsApp</a>` : ''}<button class="btn ghost sm" data-act="shareApp">Recomendar la app</button></div>
+  <h3 class="mt24 mb8">Ayuda</h3><div class="row wrapflex"><button class="btn ghost sm" data-act="open" data-sh="ayuda">Centro de ayuda</button>${CFG.supportEmail ? `<a class="btn ghost sm" href="${mailLink()}">Escribir a soporte</a>` : ''}${CFG.whatsapp ? `<a class="btn ghost sm" href="${waLink()}" target="_blank" rel="noopener noreferrer">Ayuda por WhatsApp</a>` : ''}<button class="btn ghost sm" data-act="shareApp">Recomendar la app</button></div>
   <h3 class="mt24 mb8">Copia de seguridad</h3><p class="small muted">Tus datos se guardan solo en este dispositivo. Exportá una copia de vez en cuando y guardala donde quieras${S.lastBackup ? ` (última copia: ${fdate(S.lastBackup, { day: 'numeric', month: 'long' })})` : ''}.</p>
   <div class="row wrapflex"><button class="btn ghost sm" data-act="export">Exportar copia</button><label class="btn ghost sm" style="cursor:pointer">Importar copia<input id="imp" type="file" accept=".json,application/json" class="hide"></label></div>
   <h3 class="mt24 mb8">Otras opciones</h3><div class="row wrapflex"><button class="btn ghost sm" data-act="open" data-sh="tool" data-n="aviso">Aviso importante</button><button class="btn ghost sm" data-act="reset" style="color:var(--bad);border-color:var(--bad)">Borrar todo y empezar de nuevo</button></div>`;
@@ -1344,13 +1357,15 @@ function vInicio() {
     ${ht('📷', 'Fotos de progreso', 'data-act="open" data-sh="photos"')}
     ${ht('💪', 'Ejercicio en casa', 'data-act="open" data-sh="workouts"')}
     ${ht('🌿', 'SOS antojo', 'data-act="open" data-sh="sos"', 't')}
+    ${ht('💚', 'Volver al plan', 'data-act="open" data-sh="retomar"', 't')}
     ${ht('🧮', 'Tablas y consejos', 'data-act="open" data-sh="herr"')}
     ${ht('🔬', 'Ciencia y fuentes', 'data-act="open" data-sh="evid"')}
     ${ht('♥', 'Recomendar la app', 'data-act="shareApp"')}
     ${installEligible() ? ht('⬇️', 'Instalar la app', 'data-act="install"') : ''}
+    ${ht('✉️', 'Ayuda y contacto', 'data-act="open" data-sh="ayuda"')}
     ${ht('⚙️', 'Ajustes y copia', 'data-act="open" data-sh="settings"')}
   </div>
-  <div class="foot">Reseteo Real · Silvi Aura<br>Contenido informativo y educativo. No reemplaza el consejo de un profesional de la salud.</div>`;
+  <div class="foot">Reseteo Real · Silvi Aura${CFG.supportEmail ? `<br>¿Dudas? Escribinos a <a href="${mailLink()}">${esc(CFG.supportEmail)}</a>` : ''}<br>Contenido informativo y educativo. No reemplaza el consejo de un profesional de la salud.</div>`;
 }
 function shHerr() {
   const t = (n, ic, tt, sub) => `<button class="tile" data-act="open" data-sh="tool" data-n="${n}"><div class="ti">${ic}</div><div><b>${tt}</b><span>${sub}</span></div></button>`;
@@ -1458,5 +1473,202 @@ Object.assign(ACT, {
   bkFs(t) { S.fs = clamp((S.fs == null ? 1 : S.fs) + +t.dataset.d, 0, 2); save(); renderSheet(); }
 });
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.in === 'bq') bkSearch(e.target.value); });
+
+function shAyuda() {
+  return `${head('Ayuda y contacto')}${CFG.supportEmail ? `<div class="card center"><p style="margin-bottom:10px">¿Tenés una duda o algo no funciona? Escribinos y te respondemos lo antes posible.</p><a class="btn block" href="${mailLink()}">Escribir a ${esc(CFG.supportEmail)}</a></div>` : ''}
+  <h3 class="mt24 mb8">Preguntas frecuentes sobre la app</h3>
+  ${acc('¿Cómo instalo la app en mi celular?', '<p>Se instala como cualquier app y funciona sin internet. Tocá el botón para ver los pasos según tu dispositivo.</p><button class="btn ghost sm" data-act="install">Ver cómo instalarla</button>')}
+  ${acc('¿Mi progreso se guarda?', '<p>Sí, pero <b>solo en este dispositivo</b>: no se sube a ningún lado. Si cambiás de celular o borrás los datos del navegador, se pierde. Por eso, de vez en cuando, andá a <b>Ajustes → Exportar copia</b> y guardala. En el celular nuevo usá <b>Importar copia</b>. Las fotos de progreso no se incluyen en la copia.</p>')}
+  ${acc('¿Cómo cambio mi peso, mi meta o mi plan?', '<p>En <b>Ajustes</b> (el engranaje de Inicio o el botón "Ajustes y copia") podés actualizar tus datos, elegir otra versión del plan (mujer, hombre, vegetariano o poco tiempo) y volver a calcular tu objetivo.</p>')}
+  ${acc('¿Puedo cambiar una comida del plan?', '<p>Sí. En <b>Mi día</b> tocá <b>Cambiar</b> debajo de la comida y elegí otra receta parecida. También podés ajustar tus porciones en la pestaña <b>Plan</b>.</p>')}
+  ${acc('Me salté un día o me salí del plan', '<p>No pasa nada: no hace falta empezar de cero. Mirá los pasos para retomar sin culpa.</p><button class="btn ghost sm" data-act="open" data-sh="retomar">Volver al plan</button>')}
+  ${acc('¿Dónde están las guías del ebook?', '<p>En <b>Inicio → Leer la guía completa</b> está todo el libro: capítulos, recetas, planes y bonos, con buscador.</p><button class="btn ghost sm" data-act="open" data-sh="libro">Abrir la guía</button>')}
+  <p class="tiny muted mt16">Versión de la app: ${APP_V}</p>`;
+}
+Object.assign(SHEETS, { ayuda: shAyuda });
+
+/* =====================================================================
+   Modo cocina · Completar mi día · Receta como imagen · Volver al plan
+   ===================================================================== */
+
+/* ---------- 1) Modo cocina ---------- */
+function ckDur(text) {
+  const out = [], re = /(\d+)(?:\s*(?:-|–|a)\s*(\d+))?\s*(horas?|hs?\b|minutos?|min\b|segundos?|seg\b)/gi; let m;
+  while ((m = re.exec(text)) && out.length < 2) {
+    const a = +m[1], b = m[2] ? +m[2] : a, hi = Math.max(a, b), u = m[3].toLowerCase();
+    const sec = u.startsWith('h') ? hi * 3600 : u.startsWith('s') ? hi : hi * 60;
+    if (sec >= 20 && sec <= 4 * 3600) out.push({ sec, label: (m[2] ? `${m[1]}-${m[2]}` : m[1]) + ' ' + (u.startsWith('h') ? 'h' : u.startsWith('s') ? 's' : 'min') });
+  }
+  return out;
+}
+let CKIV = null, CKLOCK = null;
+function ckStop() {
+  if (CKIV) { clearInterval(CKIV); CKIV = null; }
+  if (UI.ck) UI.ck.timer = null;
+  try { if (CKLOCK && CKLOCK.release) CKLOCK.release(); } catch (e) { } CKLOCK = null;
+}
+function ckTimerHTML() {
+  const c = UI.ck; if (!c || !c.timer) return '';
+  const left = Math.max(0, Math.ceil((c.timer.end - Date.now()) / 1000));
+  return `<span>⏱ ${esc(c.timer.label)} · <b id="ck-t">${mmss(left)}</b></span><button class="chip" data-act="ckCancel">Cancelar</button>`;
+}
+function ckPaint() { const el = $('#ck-timer'); if (el) { el.innerHTML = ckTimerHTML(); el.classList.toggle('hide', !(UI.ck && UI.ck.timer)); } }
+function ckTick() {
+  const c = UI.ck;
+  if (!c || !UI.stack.some(s => s.sh === 'cocina')) { ckStop(); return; }
+  if (!c.timer) { if (CKIV) { clearInterval(CKIV); CKIV = null; } return; }
+  const left = Math.ceil((c.timer.end - Date.now()) / 1000);
+  if (left <= 0) { const lab = c.timer.label; c.timer = null; if (CKIV) { clearInterval(CKIV); CKIV = null; } beep(990, 400); setTimeout(() => beep(990, 400), 550); vib(); toast(`¡Terminó el temporizador de ${lab}!`); ckPaint(); return; }
+  const t = $('#ck-t'); if (t) t.textContent = mmss(left);
+}
+function shCocina(s) {
+  const c = UI.ck; if (!c || c.id !== s.id) return `${head('Modo cocina')}<p class="muted">Abrí una receta y tocá "Modo cocina".</p>`;
+  const r = REC[c.id], n = r.st.length, i = c.i;
+  let body;
+  if (i === 0) body = `<div class="over">Antes de empezar</div><h2 style="margin:4px 0 4px">Ingredientes</h2><p class="small muted">Tocá lo que ya tenés a mano. La receta rinde ${r.p} ${r.p === 1 ? 'porción' : 'porciones'}.</p>${r.ing.map((x, k) => `<div class="si ${c.ticks[k] ? 'on' : ''}"><button class="cb" data-act="ckTick" data-k="${k}" aria-pressed="${!!c.ticks[k]}" aria-label="${esc(x[0])}">${svg('check')}</button><span class="lbl" style="font-size:17px">${esc(cap(x[0]))}</span><span></span></div>`).join('')}`;
+  else if (i <= n) {
+    const txt = r.st[i - 1], d = ckDur(txt);
+    body = `<div class="over">Paso ${i} de ${n}</div><p class="ckstep">${esc(txt)}</p>${d.map(x => `<button class="btn block mt12" data-act="ckTimer" data-sec="${x.sec}" data-label="${esc(x.label)}">⏱ Temporizador de ${esc(x.label)}</button>`).join('')}`;
+  } else body = `<div class="center" style="padding:10px 0"><div class="seal" aria-hidden="true">${svg('check')}</div><h2 style="margin:16px 0 6px">¡Buen provecho!</h2><p class="muted">${r.k} kcal · ${r.pr} g de proteína por porción.</p></div><div class="note sage small"><b>Tip:</b> ${esc(r.ti)}</div><button class="btn block mt12" data-act="addEx" data-id="${r.id}" data-day="${hoyN()}">Sumar a mi día</button><button class="btn ghost block mt8" data-act="close">Cerrar</button>`;
+  return `<div class="sheet-h"><h3>${esc(r.n)}</h3><button class="iconbtn" data-act="close" aria-label="Cerrar">${svg('close')}</button></div>
+  <div class="bar mb8"><i style="width:${Math.round(i / (n + 1) * 100)}%"></i></div><div id="ck-timer" class="cktimer ${c.timer ? '' : 'hide'}">${ckTimerHTML()}</div>
+  <div id="ck-body" style="min-height:40vh">${body}</div>
+  <div class="row mt16"><button class="btn ghost" data-act="ckNav" data-d="-1" ${i === 0 ? 'disabled' : ''}>← Anterior</button><button class="btn grow" data-act="ckNav" data-d="1" ${i > n ? 'disabled' : ''}>${i === 0 ? 'Empezar' : i === n ? 'Terminar' : 'Siguiente'} →</button></div>
+  <p class="tiny muted center mt12">La pantalla se mantiene encendida mientras cocinás.</p>`;
+}
+
+/* ---------- 2) Completar mi día ---------- */
+function dayGap(n) {
+  const c = calc(S.p), es = dayPlan(n), lg = L(n), tk = lg.m || {};
+  let eK = 0, eP = 0, rK = 0, rP = 0;
+  es.forEach((e, i) => { if (tk['dacs'[i]]) { eK += e.nu.k; eP += e.nu.p; } else { rK += e.nu.k; rP += e.nu.p; } });
+  (lg.ex || []).forEach(x => { eK += x.k || 0; eP += x.pr || 0; });
+  return { c, eK, eP, rK, rP, gapK: c.target - eK - rK, gapP: c.pLo - eP - rP };
+}
+function gapSuggest(n, g) {
+  const used = new Set(dayPlan(n).map(e => e.r)); (L(n).ex || []).forEach(x => used.add(x.n));
+  const maxK = Math.max(120, g.gapK + 60), gp = Math.max(0, g.gapP);
+  const pool = D.recipes.filter(r => (S.p.plan !== 'veg' || r.v) && r.k >= 60 && r.k <= maxK && !used.has(r.id) && !(L(n).ex || []).some(x => x.n === r.n));
+  pool.sort((a, b) => Math.min(b.pr, gp) - Math.min(a.pr, gp) || Math.abs(a.k - g.gapK) - Math.abs(b.k - g.gapK));
+  const out = [], cats = new Set();
+  for (const r of pool) { if (out.length >= 3) break; if (!cats.has(r.c)) { out.push(r); cats.add(r.c); } }
+  for (const r of pool) { if (out.length >= 3) break; if (!out.includes(r)) out.push(r); }
+  return out;
+}
+function completeCard(n) {
+  if (n < 1) return '';
+  const g = dayGap(n), needK = g.gapK >= 100, needP = g.gapP >= 10;
+  if (!needK && !needP) {
+    const over = g.eK > g.c.target * 1.1;
+    return `<div class="note sage small mt12">${over ? '<b>Ya llegaste a tu objetivo de hoy.</b> Tu cuerpo no necesita más.' : '<b>Vas muy bien:</b> con lo que queda de tu plan llegás a tu objetivo de hoy.'}</div>`;
+  }
+  const falta = [needK ? `≈ ${n0(g.gapK)} kcal` : '', needP ? `≈ ${n0(g.gapP)} g de proteína` : ''].filter(Boolean).join(' y ');
+  const sug = gapSuggest(n, needK ? g : Object.assign({}, g, { gapK: 180 }));
+  return `<div class="sec"><h3>Completar mi día</h3><div class="card"><p class="small" style="margin-bottom:6px">Aun comiendo todo lo que queda de tu plan, hoy te faltarían <b>${falta}</b>. Estas opciones te ayudan a completarlo:</p>
+    ${sug.map(r => `<div class="meal">${thumb(r.id)}<div><button class="nm" data-act="open" data-sh="recipe" data-id="${r.id}">${esc(r.n)}</button><div class="mt">${r.k} kcal · ${r.pr} g prot. · ${r.t} min</div></div><button class="btn sm" data-act="addEx" data-id="${r.id}" data-day="${n}">Sumar</button></div>`).join('')}</div></div>`;
+}
+function retomarCard() {
+  return `<div class="card mt12 noprint" style="display:flex;gap:12px;align-items:center"><div class="grow"><div class="b small">¿Te saliste del plan?</div><div class="tiny muted">No pasa nada: volver es más fácil de lo que parece.</div></div><button class="btn sm" data-act="open" data-sh="retomar">Volver al plan</button></div>`;
+}
+
+/* ---------- 3) Receta como imagen ---------- */
+/*RCARD_START*/
+function drawRecipeCard(ctx, sp) {
+  const W = sp.W, H = sp.H, cx = W / 2;
+  ctx.fillStyle = '#FAF5EF'; ctx.fillRect(0, 0, W, H);
+  ctx.lineWidth = 4; ctx.strokeStyle = '#3E5A42'; ctx.strokeRect(44, 44, W - 88, H - 88);
+  ctx.lineWidth = 2; ctx.strokeStyle = '#C1693F'; ctx.strokeRect(62, 62, W - 124, H - 124);
+  const px = 90, py = 92, pw = W - 180, ph = 566;
+  if (sp.img) {
+    const iw = sp.img.width || sp.img.naturalWidth, ih = sp.img.height || sp.img.naturalHeight, sc = Math.max(pw / iw, ph / ih), sw = pw / sc, sh = ph / sc;
+    ctx.drawImage(sp.img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, px, py, pw, ph);
+  } else { ctx.fillStyle = '#E3EBDF'; ctx.fillRect(px, py, pw, ph); ctx.textAlign = 'center'; ctx.font = '170px sans-serif'; ctx.fillStyle = '#2A4130'; ctx.fillText(sp.emoji || '🍽️', cx, py + ph / 2 + 60); }
+  ctx.lineWidth = 3; ctx.strokeStyle = '#C1693F'; ctx.strokeRect(px, py, pw, ph);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#2A4130';
+  let fs = 60; ctx.font = `700 ${fs}px Lora, Georgia, serif`; let lines = wrapText(ctx, sp.title, W - 200);
+  if (lines.length > 2) { fs = 50; ctx.font = `700 ${fs}px Lora, Georgia, serif`; lines = wrapText(ctx, sp.title, W - 200); }
+  let y = 762; lines.slice(0, 3).forEach(l => { ctx.fillText(l, cx, y); y += Math.round(fs * 1.2); });
+  ctx.fillStyle = '#66746A'; ctx.font = '500 32px Poppins, sans-serif'; ctx.fillText(sp.meta, cx, y + 8);
+  const my = Math.max(y + 96, 1020), n = sp.macros.length;
+  sp.macros.forEach((m, i) => {
+    const x = cx + (i - (n - 1) / 2) * 235;
+    ctx.fillStyle = '#2A4130'; ctx.font = '700 58px Lora, Georgia, serif'; ctx.fillText(m[0], x, my);
+    ctx.fillStyle = '#66746A'; ctx.font = '400 26px Poppins, sans-serif'; ctx.fillText(m[1], x, my + 40);
+  });
+  ctx.fillStyle = '#A4532E'; ctx.font = '400 24px Poppins, sans-serif'; ctx.fillText('Valores por porción', cx, my + 84);
+  ctx.fillStyle = '#2A4130'; ctx.font = '700 50px Lora, Georgia, serif'; ctx.fillText('Reseteo Real', cx, 1212);
+  ctx.fillStyle = '#66746A'; ctx.font = '400 28px Poppins, sans-serif'; ctx.fillText('Silvi Aura · ' + sp.url, cx, 1260);
+}
+/*RCARD_END*/
+function imgLoad(src) { return new Promise(res => { const im = new Image(); const t = setTimeout(() => res(null), 5000); im.onload = () => { clearTimeout(t); res(im); }; im.onerror = () => { clearTimeout(t); res(null); }; im.src = src; }); }
+async function recipeImage(id) {
+  if (IMG[id]) return imgLoad(IMG[id]);
+  for (const e of [PHX[id]].filter(Boolean).concat(PHEXT)) { const im = await imgLoad(`fotos/${id}.${e}`); if (im) return im; }
+  return null;
+}
+async function buildRecipeCard() {
+  const C = UI.rc; if (!C) return; const r = REC[C.id];
+  try { if (document.fonts && document.fonts.load) await Promise.all(['700 60px Lora', '500 32px Poppins', '400 26px Poppins'].map(f => document.fonts.load(f))); } catch (e) { }
+  const img = await recipeImage(r.id);
+  const make = im => {
+    const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350; const ctx = cv.getContext && cv.getContext('2d'); if (!ctx) return null;
+    drawRecipeCard(ctx, { W: 1080, H: 1350, img: im, emoji: CATS[r.c][1], title: r.n, meta: `${r.tt} · ${r.p} ${r.p === 1 ? 'porción' : 'porciones'} · ${r.d}`, macros: [[String(r.k), 'kcal'], [r.pr + ' g', 'proteínas'], [r.ch + ' g', 'carbohidratos'], [r.fa + ' g', 'grasas']], url: CFG.shareUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') });
+    return cv;
+  };
+  let cv = make(img), url = null;
+  try { url = cv.toDataURL('image/png'); } catch (e) { cv = make(null); url = cv && cv.toDataURL('image/png'); }
+  if (!cv) { toast('Tu navegador no permite crear la imagen'); return; }
+  C.url = url; C.blob = await new Promise(res => { try { cv.toBlob(b => res(b), 'image/png'); } catch (e) { res(null); } });
+  if (UI.stack.length && UI.stack[UI.stack.length - 1].sh === 'rcard') renderSheet();
+}
+function shRCard(s) {
+  const r = REC[s.id], C = UI.rc || {};
+  return `${head('Compartir esta receta')}<p class="small muted">Una imagen con la foto, las calorías y tu marca, lista para WhatsApp o Instagram.</p>
+  <div class="cardbox">${C.url ? `<img src="${C.url}" alt="Imagen de la receta ${esc(r.n)}">` : '<div class="muted center small" style="padding:60px 0">Preparando la imagen…</div>'}</div>
+  <div class="row mt12"><button class="btn grow" data-act="rcShare">Compartir</button><button class="btn ghost" data-act="rcSave">Guardar imagen</button></div>`;
+}
+
+/* ---------- 4) Volver al plan ---------- */
+function shRetomar() {
+  const n = curDay(), nm = n >= 1 ? nextMeal(n) : null;
+  return `${head('Volver al plan, sin culpa')}<p>Un día que no salió como esperabas no arruina tu progreso. Lo que cuenta es el patrón general, no un día suelto.</p>
+  <h3 class="mt16 mb8">Tres pasos para volver ahora</h3>
+  <ol class="steps"><li><i>1</i><span><b>Empezá de nuevo en tu próxima comida.</b> No esperes a mañana ni al lunes.</span></li>
+  <li><i>2</i><span><b>Volvé a tu plan tal cual está.</b> No castigues la comida siguiente: saltear comidas para compensar suele terminar en más hambre y más descontrol, no en menos calorías.</span></li>
+  <li><i>3</i><span><b>Tomá un vaso de agua</b> y marcá tu próxima comida en la app.</span></li></ol>
+  ${nm ? `<div class="card mt12"><div class="over">Tu próxima comida</div><div class="b" style="margin:4px 0 8px">${SLOTS[nm.si][1]} · ${esc(REC[nm.e.r].n)}</div><button class="btn sm" data-act="goto" data-t="hoy">Ir a mi día</button></div>` : ''}
+  <button class="btn ghost block mt12" data-act="open" data-sh="addfood" data-day="${hoyN()}">Anotar lo que comí, sin juzgarme</button>
+  <h3 class="mt24 mb8">Según lo que te pasó</h3>
+  ${acc('Estoy de viaje', '<p>Planificá con flexibilidad: llevá snacks con proteína (huevos duros, frutos secos, yogur), elegí preparaciones a la plancha, al horno o al vapor y no te olvides del agua. Un viaje no arruina meses de trabajo: volvé a tu patrón habitual al día siguiente, sin culpa y sin compensaciones extremas.</p>')}
+  ${acc('Tengo una fiesta o una salida', '<ol style="padding-left:20px;margin:0"><li>Mirá el menú antes de ir, si es posible.</li><li>Priorizá preparaciones a la plancha, al horno, grilladas o al vapor sobre las fritas.</li><li>Pedí los aderezos y salsas aparte.</li><li>Empezá con una ensalada o vegetales.</li><li>Elegí <b>una</b> cosa para disfrutar sin culpa (el postre, el pan, la bebida).</li><li>No castigues la comida del día siguiente.</li></ol>')}
+  ${acc('Estoy en una semana de estrés', '<p>El estrés y la falta de sueño aumentan el apetito y los antojos. Apuntá a dormir unas 7 horas, identificá tu disparador (aburrimiento, estrés, cansancio) y hacé una pausa de 2 o 3 minutos antes de comer.</p><button class="btn ghost sm" data-act="open" data-sh="sos">Abrir SOS antojo</button>')}
+  ${acc('Pasaron varios días', '<p>No hace falta empezar de cero: seguí desde el día de hoy con tu plan. Si sentís que la motivación bajó, es completamente normal. Revisá el Capítulo 8 de la guía, armá tu menú rotativo con tus recetas favoritas y, si lo necesitás, considerá una o dos semanas comiendo en mantenimiento.</p><button class="btn ghost sm" data-act="open" data-sh="libro" data-id="c8">Leer el Capítulo 8</button>')}
+  <p class="tiny muted mt16">Si sentís que comer se te vuelve una lucha constante o te genera mucha angustia, hablalo con un profesional de la salud.</p>`;
+}
+
+/* ---------- registro ---------- */
+Object.assign(SHEETS, { cocina: shCocina, rcard: shRCard, retomar: shRetomar });
+Object.assign(ACT, {
+  ckGo(t) {
+    ckStop(); UI.ck = { id: t.dataset.id, i: 0, ticks: {}, timer: null };
+    try { if (navigator.wakeLock && navigator.wakeLock.request) navigator.wakeLock.request('screen').then(l => { CKLOCK = l; }).catch(() => { }); } catch (e) { }
+    openSheet({ sh: 'cocina', id: t.dataset.id });
+  },
+  ckNav(t) { const c = UI.ck, n = REC[c.id].st.length; c.i = clamp(c.i + +t.dataset.d, 0, n + 1); renderSheet(); const sh = $('.sheet'); if (sh) sh.scrollTop = 0; },
+  ckTick(t) { const c = UI.ck, k = t.dataset.k; c.ticks[k] = !c.ticks[k]; renderSheet(); },
+  ckTimer(t) { const c = UI.ck; if (CKIV) clearInterval(CKIV); c.timer = { end: Date.now() + (+t.dataset.sec) * 1000, label: t.dataset.label }; CKIV = setInterval(ckTick, 500); ckPaint(); beep(660, 90); },
+  ckCancel() { const c = UI.ck; if (c) c.timer = null; if (CKIV) { clearInterval(CKIV); CKIV = null; } ckPaint(); },
+  rcOpen(t) { UI.rc = { id: t.dataset.id, url: null, blob: null }; openSheet({ sh: 'rcard', id: t.dataset.id }); buildRecipeCard(); },
+  rcSave() { const C = UI.rc; if (!C || !C.blob) { toast('Todavía se está preparando la imagen'); return; } const a = document.createElement('a'); a.href = URL.createObjectURL(C.blob); a.download = `receta-${C.id}.png`; document.body.appendChild(a); a.click(); a.remove(); },
+  rcShare() {
+    const C = UI.rc; if (!C || !C.blob) { toast('Todavía se está preparando la imagen'); return; }
+    const r = REC[C.id], f = new File([C.blob], `receta-${C.id}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) navigator.share({ files: [f], title: r.n, text: `${r.n} · ${r.k} kcal · ${r.pr} g de proteína. Receta de Reseteo Real, de Silvi Aura. ${CFG.shareUrl}` }).catch(() => { });
+    else { ACT.rcSave(); toast('Guardamos la imagen para que la compartas'); }
+  }
+});
+const _close2 = ACT.close;
+ACT.close = function (t, e) { _close2(t, e); if (!UI.stack.some(s => s.sh === 'cocina')) ckStop(); };
+if ('serviceWorker' in navigator) { const had = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => { if (had) toast('Hay una versión nueva de la app. Cerrala y volvé a abrirla para verla.'); }); }
 
 </script></body></html>

@@ -1,6 +1,6 @@
 /* Reseteo Real: guarda la app en el dispositivo para que funcione sin conexión.
    Si actualizás index.html, cambiá el número de VERSION para que todos reciban la versión nueva. */
-const VERSION = 'v4';
+const VERSION = 'v7';
 const CACHE = 'reseteo-real-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
